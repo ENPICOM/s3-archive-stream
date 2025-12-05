@@ -17,9 +17,9 @@ npm install s3-archive-stream
 
 ## Basic Usage
 
-### Stream to file
+`s3-archive-stream` exports a single function `s3ArchiveStream()`, which returns an `archiver.Archiver` stream which can be used to pipe to a target, such as a http response or a file on disk.
 
-`s3-archive-stream` exports a single function `s3ArchiveStream()`, which return an `archiver.Archiver` stream which can be used to pipe to a target, such as a http response or a file on disk.
+### Stream to file
 
 ```ts
 import fs from 'fs'
