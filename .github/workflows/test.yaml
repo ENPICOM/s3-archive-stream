@@ -7,7 +7,8 @@ on:
       - main
 
 jobs:
-  build:
+  test:
+    name: Test s3-archive-stream
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -17,5 +18,6 @@ jobs:
         with:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
       - run: npm run fix-check
       - run: npm run test
