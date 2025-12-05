@@ -1,0 +1,7 @@
+*.tsbuildinfo
+.npm
+.vscode
+node_modules
+dist
+*.zip
+*.tar

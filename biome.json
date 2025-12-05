@@ -1,0 +1,94 @@
+{
+    "$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
+    "vcs": {
+        "enabled": false,
+        "clientKind": "git",
+        "useIgnoreFile": false
+    },
+    "formatter": {
+        "enabled": true,
+        "indentStyle": "space",
+        "indentWidth": 4,
+        "lineWidth": 120
+    },
+    "assist": {
+        "actions": {
+            "source": {
+                "organizeImports": "on"
+            }
+        }
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "complexity": {
+                "noUselessCatch": {
+                    "level": "error",
+                    "fix": "safe"
+                },
+                "useLiteralKeys": "off",
+                "useOptionalChain": {
+                    "level": "error",
+                    "fix": "safe"
+                },
+                "noUselessConstructor": {
+                    "level": "error",
+                    "fix": "safe"
+                },
+                "noUselessTernary": {
+                    "level": "error",
+                    "fix": "safe"
+                },
+                "noBannedTypes": "off",
+                "noForEach": "off",
+                "noUselessContinue": "off",
+                "noArguments": "off"
+            },
+            "correctness": {
+                "noUnusedImports": {
+                    "level": "error",
+                    "fix": "safe"
+                },
+                "noEmptyPattern": "off",
+                "noUnsafeOptionalChaining": "off",
+                "useExhaustiveDependencies": "off"
+            },
+            "performance": {
+                "noDelete": "off",
+                "noAccumulatingSpread": "off"
+            },
+            "recommended": true,
+            "style": {
+                "useLiteralEnumMembers": "off",
+                "useNodejsImportProtocol": "off"
+            },
+            "suspicious": {
+                "noConfusingVoidType": {
+                    "level": "error",
+                    "fix": "safe"
+                },
+                "noDoubleEquals": {
+                    "level": "error",
+                    "fix": "safe",
+                    "options": {
+                        "ignoreNull": true
+                    }
+                },
+                "noAssignInExpressions": "off",
+                "noControlCharactersInRegex": "off",
+                "noArrayIndexKey": "off"
+            }
+        },
+        "includes": ["**", "!**/*.js"]
+    },
+    "javascript": {
+        "formatter": {
+            "quoteStyle": "single",
+            "semicolons": "always"
+        }
+    },
+    "files": {
+        "ignoreUnknown": false,
+        "includes": ["**", "!**/dist", "!**/target", "!**/.github"]
+    }
+}

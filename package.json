@@ -1,0 +1,56 @@
+{
+    "name": "s3-archive-stream",
+    "version": "1.0.0",
+    "description": "A NodeJS utility to stream-zip S3 objects into a single archive using Archiver and AWS SDK",
+    "main": "./dist/index.js",
+    "type": "module",
+    "scripts": {
+        "clean": "rm -rf ./dist/*",
+        "build": "tsc --build .",
+        "clean:build": "npm run clean && npm run build",
+        "watch": "tsc --watch",
+        "format": "npx --no-install @biomejs/biome format --write",
+        "format-check": "npx --no-install @biomejs/biome format",
+        "lint": "npx --no-install @biomejs/biome lint --fix",
+        "lint-check": "npx --no-install @biomejs/biome lint",
+        "fix": "npx --no-install @biomejs/biome check --formatter-enabled=true --linter-enabled=true --assist-enabled=true --write",
+        "fix-check": "npx --no-install @biomejs/biome check --formatter-enabled=true --linter-enabled=true --assist-enabled=true",
+        "test": "npx --no-install vitest --silent=false",
+        "example-express": "npx tsx ./example/express.ts",
+        "example-file": "npx tsx ./example/file.ts"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/bmjhversteeg/s3-archive-stream.git"
+    },
+    "author": "Bart Versteeg",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/bmjhversteeg/s3-archive-stream/issues"
+    },
+    "homepage": "https://github.com/bmjhversteeg/s3-archive-stream#readme",
+    "dependencies": {
+        "@aws-sdk/client-s3": "3.627.0",
+        "archiver": "7.0.1"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "2.2.4",
+        "@types/adm-zip": "^0.5.7",
+        "@types/archiver": "6.0.3",
+        "@types/express": "^5.0.6",
+        "@types/tar-stream": "^3.1.4",
+        "adm-zip": "^0.5.16",
+        "aws-sdk-client-mock": "^4.1.0",
+        "express": "^5.2.1",
+        "tar-stream": "^3.1.7",
+        "typescript": "^5.9.3",
+        "vitest": "3.2.3"
+    },
+    "keywords": [
+        "s3",
+        "stream",
+        "archive",
+        "zip",
+        "express"
+    ]
+}
