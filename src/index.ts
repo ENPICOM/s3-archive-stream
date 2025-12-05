@@ -2,15 +2,15 @@ import { GetObjectCommand, ListObjectsV2Command, type ListObjectsV2CommandOutput
 import archiver, { type Archiver, type ArchiverOptions, type EntryData, type Format } from 'archiver';
 import { Readable } from 'stream';
 
-class S3StreamArchiveError extends Error {}
+class S3ArchiveStreamError extends Error {}
 
-class NoS3ClientProvidedForBucketError extends S3StreamArchiveError {
+class NoS3ClientProvidedForBucketError extends S3ArchiveStreamError {
     constructor(s3BucketName: string) {
         super(`A S3Client instance was not provided for s3 bucket: ${s3BucketName}`);
     }
 }
 
-class FailedToGetArchiveEntryStreamError extends S3StreamArchiveError {
+class FailedToGetS3ObjectStreamError extends S3ArchiveStreamError {
     constructor(s3Key: string, e: unknown) {
         super(
             `Failed to get object stream for s3 object: ${s3Key}. Check if your IAM credentials allow you access. Original Error: ${e}`,
@@ -18,7 +18,7 @@ class FailedToGetArchiveEntryStreamError extends S3StreamArchiveError {
     }
 }
 
-class FailedToListObjectsError extends S3StreamArchiveError {
+class FailedToListObjectsError extends S3ArchiveStreamError {
     constructor(s3Key: string, e: unknown) {
         super(
             `Failed to list s3 objects for directory path: ${s3Key}. Check if your IAM credentials allow you access. Original Error: ${e}`,
@@ -29,40 +29,73 @@ class FailedToListObjectsError extends S3StreamArchiveError {
 type S3BucketName = string;
 type S3Key = string;
 
-interface ArchiveEntry extends Omit<EntryData, 'name'> {
-    s3Key: S3Key;
+type S3ArchiveStreamEntry = Omit<EntryData, 'name'> & {
     s3BucketName: S3BucketName;
-    name?: string;
     preserveFolderStructure?: boolean;
-}
+} & (
+        | {
+              s3Key: S3Key;
+              name?: string;
+          }
+        | {
+              s3Dir: S3Key;
+          }
+    );
 
-interface S3StreamArchiveOptions {
+interface S3ArchiveStreamOptions {
     format?: Format;
     archiverOptions?: ArchiverOptions;
 }
 
-function s3StreamArchive<C extends S3Client, Q extends Record<S3BucketName, C>>(
-    clientOrClients: Q | C,
-    entries: ArchiveEntry[],
-    options?: S3StreamArchiveOptions,
+/**
+ * Create an Archiver instance that streams S3 objects (and S3 "directories") into a single archive.
+ *
+ * Returns an Archiver (readable) stream you can pipe to a destination (for example an HTTP response
+ * or a file write stream). Each entry in `entries` must include `s3BucketName` and either:
+ * - `s3Key`: a single object key to include, or
+ * - `s3Dir`: a prefix (directory) — all non-folder objects under that prefix will be included.
+ * When `s3Dir` is used the function will list objects for that prefix and append each object stream to
+ * the archive. The optional `name` overrides the stored filename inside the archive.
+ *
+ * @param {Record<S3BucketName, S3Client> | S3Client} clientOrClients Either a single {@link S3Client}
+ *     instance used for all buckets, or a mapping of bucket name -> {@link S3Client} to support multiple
+ *     clients. When a map is provided each entry's `s3BucketName` will be used to pick the client.
+ * @param {S3ArchiveStreamEntry[]} entries List of archive entries. Each entry must contain `s3BucketName`
+ *     and either `s3Key` or `s3Dir`. See type `S3ArchiveStreamEntry` for allowed shapes.
+ * @param {S3ArchiveStreamOptions} [options] Optional archiver options (format and archiver options).
+ * @returns {Archiver} An Archiver instance. The archive is finalized automatically once all S3 objects
+ *     have been queued. You should pipe this stream to your desired destination.
+ *
+ * @throws {S3ArchiveStreamError} Base error type for this module.
+ * @throws {NoS3ClientProvidedForBucketError} When no S3 client is available for a referenced bucket.
+ * @throws {FailedToListObjectsError} When listing objects for a directory prefix fails.
+ * @throws {FailedToGetS3ObjectStreamError} When retrieving an object's stream from S3 fails.
+ */
+function s3ArchiveStream(
+    clientOrClients: Record<S3BucketName, S3Client> | S3Client,
+    entries: S3ArchiveStreamEntry[],
+    options?: S3ArchiveStreamOptions,
 ): Archiver {
     const archive = archiver(options?.format ?? 'zip', options?.archiverOptions ?? {});
 
     async function appendArchiveEntries(s3Client: S3Client, archiveEntries: typeof entries) {
+        // Loop through the entries
         for (const archiveEntry of archiveEntries) {
-            // Check if the given s3Key is a directory
+            // Check if the entry points to a directory
             // In that case, we will get all objects in it.
-            if (archiveEntry.s3Key.endsWith('/')) {
+            if ('s3Dir' in archiveEntry) {
+                const s3Dir = archiveEntry.s3Dir.endsWith('/') ? `${archiveEntry.s3Dir}/` : archiveEntry.s3Dir;
+
                 const directoryEntries: typeof entries = [];
                 let continuationToken: string | undefined;
 
+                // Use ListObjectV2 to fetch all objects under the given prefix.
                 while (true) {
-                    // Include all files in the S3 sourcePath in the archive if sourceFiles is empty
                     try {
                         const listObjectsResponse: ListObjectsV2CommandOutput = await s3Client.send(
                             new ListObjectsV2Command({
                                 Bucket: archiveEntry.s3BucketName,
-                                Prefix: archiveEntry.s3Key,
+                                Prefix: s3Dir,
                                 ContinuationToken: continuationToken,
                             }),
                         );
@@ -72,7 +105,9 @@ function s3StreamArchive<C extends S3Client, Q extends Record<S3BucketName, C>>(
                             if (Key != null && !Key.endsWith('/')) {
                                 const archiveEntryName = archiveEntry.preserveFolderStructure
                                     ? Key
-                                    : Key.slice(archiveEntry.s3Key.length);
+                                    : Key.slice(s3Dir.length);
+
+                                // Append the s3 object to the list of objects to add for this dir.
                                 directoryEntries.push({
                                     ...archiveEntry,
                                     name: archiveEntryName,
@@ -82,39 +117,52 @@ function s3StreamArchive<C extends S3Client, Q extends Record<S3BucketName, C>>(
                             }
                         }
 
+                        // End of the list.
                         if (!listObjectsResponse.IsTruncated) {
                             break;
                         }
                     } catch (e) {
-                        throw new FailedToListObjectsError(archiveEntry.s3Key, e);
+                        throw new FailedToListObjectsError(s3Dir, e);
                     }
                 }
 
+                // Now that we have all s3 object keys for this dir,
+                // We simply call appendArchiveEntries again with our directoryEntries.
                 await appendArchiveEntries(s3Client, directoryEntries);
             } else {
-                // Get the S3 Object stream
                 try {
+                    // Get the s3 Object stream
                     const { Body: s3ObjectStream } = await s3Client.send(
-                        new GetObjectCommand({ Bucket: archiveEntry.s3BucketName, Key: archiveEntry.s3Key }),
+                        new GetObjectCommand({
+                            Bucket: archiveEntry.s3BucketName,
+                            Key: archiveEntry.s3Key,
+                        }),
                     );
 
+                    // Validate the stream
                     if (s3ObjectStream == null || !(s3ObjectStream instanceof Readable)) {
                         throw new Error();
                     }
+                    // Determine which name to use in the archive,
+                    // based on whether `name` is provided and if
+                    // `preserveFolderStructure` is true or not.
                     const archiveEntryName =
                         archiveEntry.name ??
                         (archiveEntry.preserveFolderStructure
                             ? archiveEntry.s3Key
                             : archiveEntry.s3Key.substring(archiveEntry.s3Key.lastIndexOf('/') + 1));
+
+                    // Append the object stream to the archiver queue
                     archive.append(s3ObjectStream, { ...archiveEntry, name: archiveEntryName });
                 } catch (e) {
-                    throw new FailedToGetArchiveEntryStreamError(archiveEntry.s3Key, e);
+                    throw new FailedToGetS3ObjectStreamError(archiveEntry.s3Key, e);
                 }
             }
         }
     }
 
-    const groups = entries.reduce<Record<S3BucketName, typeof entries>>((acc, val) => {
+    // Group all entries by s3 bucket name
+    const groupedS3Buckets = entries.reduce<Record<S3BucketName, typeof entries>>((acc, val) => {
         if (acc[val.s3BucketName] == null) {
             acc[val.s3BucketName] = [];
         }
@@ -122,8 +170,11 @@ function s3StreamArchive<C extends S3Client, Q extends Record<S3BucketName, C>>(
         return acc;
     }, {});
 
+    // We use then/catch so the caller of `s3ArchiveStream` does not have to await
+    // this function but can directly .pipe the archiver.Archiver stream
     Promise.all(
-        Object.entries(groups).map(([s3BucketName, archiveEntries]) => {
+        Object.entries(groupedS3Buckets).map(([s3BucketName, archiveEntries]) => {
+            // determine the S3 client for the current bucket
             const client = clientOrClients instanceof S3Client ? clientOrClients : clientOrClients[s3BucketName];
 
             if (!(client instanceof S3Client)) {
@@ -133,12 +184,14 @@ function s3StreamArchive<C extends S3Client, Q extends Record<S3BucketName, C>>(
             return appendArchiveEntries(client, archiveEntries);
         }),
     )
+        // When the Promise.all resolves, we finalize the archive, blocking further appends
         .then(() => archive.finalize())
         .catch((e) => {
             throw e;
         });
 
+    // Return the archiver.Archiver stream
     return archive;
 }
 
-export { s3StreamArchive, type ArchiveEntry, type S3StreamArchiveError, type S3StreamArchiveOptions };
+export { s3ArchiveStream, type S3ArchiveStreamEntry, type S3ArchiveStreamError, type S3ArchiveStreamOptions };

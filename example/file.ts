@@ -1,7 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3';
 import { mockClient } from 'aws-sdk-client-mock';
 import fs from 'fs';
-import { s3StreamArchive } from '../src';
+import { s3ArchiveStream } from '../src';
 import { addS3MockCommands } from '../test/mockClient';
 
 // Mock the bucket contents. These can be found in the ./test/ folder
@@ -30,7 +30,7 @@ function writeS3ObjectsToZip() {
     // Create writeStream for the target output zip
     const outputFile = fs.createWriteStream('./output.zip', 'utf-8');
     // Create the archive stream and pipe it to the output zip
-    s3StreamArchive(new S3Client({}), filesToZip).pipe(outputFile);
+    s3ArchiveStream(new S3Client({}), filesToZip).pipe(outputFile);
 }
 
 writeS3ObjectsToZip();

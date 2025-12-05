@@ -1,7 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3';
 import { mockClient } from 'aws-sdk-client-mock';
 import express from 'express';
-import { s3StreamArchive } from '../src';
+import { s3ArchiveStream } from '../src';
 import { addS3MockCommands } from '../test/mockClient';
 
 // Mock the bucket contents. These can be found in the ./test/ folder
@@ -32,8 +32,8 @@ app.get('/download-me', (_req, res) => {
         },
     ];
 
-    // Create the archive stream and directly pipe it to 'res'
-    s3StreamArchive(new S3Client({}), filesToZip).pipe(res);
+    // Create the archive stream and directly pipe it to the response
+    s3ArchiveStream(new S3Client({}), filesToZip).pipe(res);
 });
 
 app.listen(port, () => {

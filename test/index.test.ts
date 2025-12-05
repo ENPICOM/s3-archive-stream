@@ -5,7 +5,7 @@ import fs from 'fs';
 import { text } from 'stream/consumers';
 import tar from 'tar-stream';
 import { describe, expect, it } from 'vitest';
-import { s3StreamArchive } from '../src';
+import { s3ArchiveStream } from '../src';
 import { addS3MockCommands } from './mockClient';
 
 const mockS3Bucket = {
@@ -45,7 +45,7 @@ describe('s3-archive-stream tests', async () => {
         ];
 
         // Create the stream archive
-        const archive = s3StreamArchive(new S3Client({}), filesToZip);
+        const archive = s3ArchiveStream(new S3Client({}), filesToZip);
         archive.pipe(file).addListener('finished', () => {
             const zip = new AdmZip(outputArchiveName);
 
@@ -93,7 +93,7 @@ describe('s3-archive-stream tests', async () => {
         ];
 
         // Create the stream archive
-        const archive = s3StreamArchive(
+        const archive = s3ArchiveStream(
             { mockedBucket1: new S3Client({}), mockedBucket2: new S3Client({}) },
             filesToZip,
         );
@@ -131,14 +131,13 @@ describe('s3-archive-stream tests', async () => {
                 s3BucketName: 'mockedBucket1',
             },
             {
-                name: 'doesnt matter',
-                s3Key: 'folder1/',
+                s3Dir: 'folder1/',
                 s3BucketName: 'mockedBucket1',
             },
         ];
 
         // Create the stream archive
-        const archive = s3StreamArchive(new S3Client({}), filesToZip);
+        const archive = s3ArchiveStream(new S3Client({}), filesToZip);
         archive.pipe(file).addListener('finished', () => {
             const zip = new AdmZip(outputArchiveName);
 
@@ -146,6 +145,7 @@ describe('s3-archive-stream tests', async () => {
             expect(zip.getEntries().length).toBe(4);
 
             // Check the file contents
+            // @ts-expect-error
             const file1Contents = zip.readAsText(filesToZip[0].name);
             expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
             const file2Contents = zip.readAsText('folder2/folder3/file1.txt');
@@ -168,15 +168,14 @@ describe('s3-archive-stream tests', async () => {
         // Our selection of files we want in the archive
         const filesToZip = [
             {
-                name: 'doesnt matter',
-                s3Key: 'folder1/',
+                s3Dir: 'folder1/',
                 preserveFolderStructure: true,
                 s3BucketName: 'mockedBucket1',
             },
         ];
 
         // Create the stream archive
-        const archive = s3StreamArchive(new S3Client({}), filesToZip);
+        const archive = s3ArchiveStream(new S3Client({}), filesToZip);
         archive.pipe(file).addListener('finished', () => {
             const zip = new AdmZip(outputArchiveName);
 
@@ -214,7 +213,7 @@ describe('s3-archive-stream tests', async () => {
         ];
 
         // Create the stream archive
-        const archive = s3StreamArchive(new S3Client({}), filesToZip);
+        const archive = s3ArchiveStream(new S3Client({}), filesToZip);
         archive.pipe(file).addListener('finished', () => {
             const zip = new AdmZip(outputArchiveName);
 
@@ -252,7 +251,7 @@ describe('s3-archive-stream tests', async () => {
         ];
 
         // Create the stream archive
-        const archive = s3StreamArchive(new S3Client({}), filesToZip);
+        const archive = s3ArchiveStream(new S3Client({}), filesToZip);
         archive.pipe(file).addListener('finish', () => {
             const zip = new AdmZip(outputArchiveName);
 
@@ -300,7 +299,7 @@ describe('s3-archive-stream tests', async () => {
         ];
 
         // Create the stream archive
-        const archive = s3StreamArchive(new S3Client({}), filesToTar, { format: 'tar' });
+        const archive = s3ArchiveStream(new S3Client({}), filesToTar, { format: 'tar' });
         archive.pipe(file).addListener('finish', async () => {
             const tarFiles: Record<string, string> = {};
 
