@@ -1,12 +1,10 @@
-name: Test s3-archive-stream
+name: Publish s3-archive-stream
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
 jobs:
   test:
-    name: Test s3-archive-stream
+    name: Publish s3-archive-stream
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -18,4 +16,3 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - run: npm run fix-check
-      - run: npm run test
