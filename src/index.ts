@@ -84,7 +84,8 @@ function s3ArchiveStream(
             // Check if the entry points to a directory
             // In that case, we will get all objects in it.
             if ('s3Dir' in archiveEntry) {
-                const s3Dir = archiveEntry.s3Dir.endsWith('/') ? `${archiveEntry.s3Dir}/` : archiveEntry.s3Dir;
+                const { s3BucketName, s3Dir, preserveFolderStructure, ...rest } = archiveEntry;
+                const prefix = archiveEntry.s3Dir.endsWith('/') ? s3Dir : `${s3Dir}/`;
 
                 const directoryEntries: typeof entries = [];
                 let continuationToken: string | undefined;
@@ -94,8 +95,8 @@ function s3ArchiveStream(
                     try {
                         const listObjectsResponse: ListObjectsV2CommandOutput = await s3Client.send(
                             new ListObjectsV2Command({
-                                Bucket: archiveEntry.s3BucketName,
-                                Prefix: s3Dir,
+                                Bucket: s3BucketName,
+                                Prefix: prefix,
                                 ContinuationToken: continuationToken,
                             }),
                         );
@@ -103,16 +104,14 @@ function s3ArchiveStream(
 
                         for (const { Key } of listObjectsResponse.Contents ?? []) {
                             if (Key != null && !Key.endsWith('/')) {
-                                const archiveEntryName = archiveEntry.preserveFolderStructure
-                                    ? Key
-                                    : Key.slice(s3Dir.length);
+                                const archiveEntryName = preserveFolderStructure ? Key : Key.slice(prefix.length);
 
                                 // Append the s3 object to the list of objects to add for this dir.
                                 directoryEntries.push({
-                                    ...archiveEntry,
+                                    ...rest,
                                     name: archiveEntryName,
                                     s3Key: Key,
-                                    s3BucketName: archiveEntry.s3BucketName,
+                                    s3BucketName: s3BucketName,
                                 });
                             }
                         }
@@ -122,7 +121,7 @@ function s3ArchiveStream(
                             break;
                         }
                     } catch (e) {
-                        throw new FailedToListObjectsError(s3Dir, e);
+                        throw new FailedToListObjectsError(prefix, e);
                     }
                 }
 
@@ -130,12 +129,13 @@ function s3ArchiveStream(
                 // We simply call appendArchiveEntries again with our directoryEntries.
                 await appendArchiveEntries(s3Client, directoryEntries);
             } else {
+                const { s3BucketName, s3Key, preserveFolderStructure, name, ...rest } = archiveEntry;
                 try {
                     // Get the s3 Object stream
                     const { Body: s3ObjectStream } = await s3Client.send(
                         new GetObjectCommand({
-                            Bucket: archiveEntry.s3BucketName,
-                            Key: archiveEntry.s3Key,
+                            Bucket: s3BucketName,
+                            Key: s3Key,
                         }),
                     );
 
@@ -147,15 +147,12 @@ function s3ArchiveStream(
                     // based on whether `name` is provided and if
                     // `preserveFolderStructure` is true or not.
                     const archiveEntryName =
-                        archiveEntry.name ??
-                        (archiveEntry.preserveFolderStructure
-                            ? archiveEntry.s3Key
-                            : archiveEntry.s3Key.substring(archiveEntry.s3Key.lastIndexOf('/') + 1));
+                        name ?? (preserveFolderStructure ? s3Key : s3Key.substring(s3Key.lastIndexOf('/') + 1));
 
                     // Append the object stream to the archiver queue
-                    archive.append(s3ObjectStream, { ...archiveEntry, name: archiveEntryName });
+                    archive.append(s3ObjectStream, { ...rest, name: archiveEntryName });
                 } catch (e) {
-                    throw new FailedToGetS3ObjectStreamError(archiveEntry.s3Key, e);
+                    throw new FailedToGetS3ObjectStreamError(s3Key, e);
                 }
             }
         }

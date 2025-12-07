@@ -15,9 +15,24 @@ One of the key features of this utility is the support of stream-zipping s3 obje
 npm install s3-archive-stream
 ```
 
+## API
+
+```ts
+ const archiveStream = s3ArchiveStream(clientOrClients, entries, options);
+```
+| Argument          | Description |
+| ----------------- | ----------- |
+| `clientOrClients: S3Client \| Record<string, S3Client>`   | `S3Client` instance or an object mapping of s3BucketName -> `S3Client`  |
+| `entries: S3ArchiveStreamEntry[]` | The entries to be added to the archive. Can be either files or directory entries. Additionally, [`archiver.EntryData`](https://www.archiverjs.com/docs/archiver#entry-data) options are also available.<Br/> <br/><b>File</b><pre><code>{ s3BucketName: string; s3Key: string; name?: string; preserveFolderStructure?: boolean; }</pre></code><br/><b>Directory</b><pre><code>{ s3BucketName: string; s3Dir: string; preserveFolderStructure?: boolean; }</pre></code>  |
+| `options.format?: archiver.Format`    | Either `'zip'` or `'tar'` |
+| `options.archiverOptions?: archiver.ArchiverOptions`  | [`archiver.ArchiverOptions`](https://www.archiverjs.com/docs/archiver#options) |
+
+Returns an `Archiver` instance, for more information and API reference, check [https://www.archiverjs.com/docs/archiver](https://www.archiverjs.com/docs/archiver)
+
 ## Basic Usage
 
 `s3-archive-stream` exports a single function `s3ArchiveStream()`, which returns an `archiver.Archiver` stream which can be used to pipe to a target, such as a http response or a file on disk.
+
 
 ### Stream to file
 
@@ -45,8 +60,7 @@ const filesToZip = [
         preserveFolderStructure: true
     },
     {
-        // s3ArchiveStream treats 's3Key' ending with a / as directory,
-        // and will zip all s3 objects under that path.
+        // s3ArchiveStream will zip all s3 objects under the given path.
         s3Dir: 'key/to/directory/',
         s3BucketName: 'my-bucket',
         // If set to false, key/to/directory/ will be stripped from
@@ -56,7 +70,7 @@ const filesToZip = [
     }
 ];
 
-const fileStream = fs.createWriteStream('archive.zip');
+const fileStream = fs.createWriteStream('example.zip');
 
 s3ArchiveStream(new S3Client(), filesToZip).pipe(fileStream);
 
@@ -80,12 +94,12 @@ const filesToZip = [
     },
 ];
 
-const fileStream = fs.createWriteStream('archive.zip');
-const myBucket1Credentials = {};
-const myBucket2Credentials = {};
+const fileStream = fs.createWriteStream('example.zip');
+const myBucket1Client = new S3Client(myBucket1Credentials);
+const myBucket2Client = new S3Client(myBucket2Credentials);
 
 s3ArchiveStream(
-    { 'my-bucket-1': new S3Client(myBucket1Credentials), 'my-bucket-2': new S3Client(MyBucket2Credentials) },
+    { 'my-bucket-1': myBucket1Client, 'my-bucket-2': myBucket2Client },
     filesToZip,
 ).pipe(fileStream);
 
@@ -96,24 +110,70 @@ s3ArchiveStream(
 Aside from writing the archive stream to file, you can also easily write it to a HTTP GET response. The `example` directory contains a working example of how to use this with `express`.
 
 ```ts
+import express from 'express';
+import { s3ArchiveStream } from 's3-archive-stream';
+
+const app = express();
+const port = 3000;
+
 app.get('/download-me', (_req, res) => {
     const filesToZip = [
         {
-            name: 'my_archive_filename1.txt',
-            s3Key: 'test_file1.txt',
-            s3BucketName: 'mockedBucket1',
+            name: 'file_1_archive_name.txt',
+            s3Key: 'key/to/my_file_1.txt',
+            s3BucketName: 'my-bucket',
         },
         {
-            name: 'my_archive_filename2.txt',
-            s3Key: 'test_file2.txt',
-            s3BucketName: 'mockedBucket1',
+            name: 'file_2_archive_name.txt',
+            s3Key: 'key/to/my_file_2.txt',
+            s3BucketName: 'my-bucket',
         },
     ];
 
     // Create the archive stream and directly pipe it to the response
     s3ArchiveStream(new S3Client(), filesToZip).pipe(res);
 });
+
+app.listen(port, () => {
+    console.log(`Server running, go to http://localhost:${port}/download-me`);
+});
 ```
+
+
+### Stream back to S3
+
+A third option is to directly stream the archive back to S3, for example using `Upload` from `@aws-sdk/lib-storage`. Simply create a `Passthrough` stream, pipe the archive stream into it and pass the `PassThrough` stream to the `Upload`'s `Body`
+
+```ts
+import { S3Client } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
+import { s3ArchiveStream } from 's3-archive-stream';
+import { PassThrough } from 'stream';
+
+const s3 = new S3Client();
+
+// Zip everything under the given prefix
+const filesToZip = [
+    {
+        s3Dir: 'key/to/folder/to/zip/',
+        s3BucketName: 'my-bucket',
+    },
+];
+
+const stream = new PassThrough();
+// We can't directly provide the archiver.Archiver object to `Body`,
+// so we use a Passthrough stream as intermediate.
+s3ArchiveStream(s3, filesToZip).pipe(stream);
+
+const upload = new Upload({
+    client: s3,
+    params: { Bucket: 'my-bucket', Key: 'example.zip', Body: stream },
+});
+
+await upload.done();
+
+```
+
 
 ## Examples
 
