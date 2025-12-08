@@ -13,7 +13,9 @@ describe('s3-archive-stream tests', async () => {
     beforeAll(async () => {
         s3MockClient = new S3Client({
             forcePathStyle: true,
-            endpoint: process.env['S3_MOCK_ENDPOINT'] ?? 'http://localhost:9090',
+            region: 'us-east-1',
+            credentials: { accessKeyId: '', secretAccessKey: '' },
+            endpoint: 'http://localhost:9090',
         });
 
         const mockS3Buckets = {
