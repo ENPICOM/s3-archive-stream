@@ -46,10 +46,15 @@
         "vitest": "3.2.3"
     },
     "keywords": [
+        "aws",
         "s3",
         "stream",
         "archive",
         "zip",
-        "express"
+        "tar",
+        "express",
+        "upload",
+        "download",
+        "bucket"
     ]
 }
