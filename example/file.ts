@@ -1,7 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3';
 import fs from 'fs';
 import { s3ArchiveStream } from '../src';
-import { createMockedFiles } from '../test/createMockedBuckets';
+import { createMockedFiles } from '../test/mocks3Objects';
 
 // Mock the bucket contents.
 const mockS3Buckets = {
@@ -9,7 +9,7 @@ const mockS3Buckets = {
 };
 
 // Local S3 Mock server provided by adobe/s3mock container
-const s3MockClient = new S3Client({ forcePathStyle: true, region: 'us-east-1', endpoint: 'http://localhost:9090' });
+const s3MockClient = new S3Client({ forcePathStyle: true, endpoint: 'http://localhost:9090' });
 await createMockedFiles(s3MockClient, mockS3Buckets);
 
 const filesToZip = [

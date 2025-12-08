@@ -5,13 +5,13 @@ import { text } from 'stream/consumers';
 import tar from 'tar-stream';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { s3ArchiveStream } from '../src';
-import { createMockedFiles } from './createMockedBuckets';
+import { createMockedFiles } from './mocks3Objects';
 
 let s3MockClient: S3Client;
 
 describe('s3-archive-stream tests', async () => {
     beforeAll(async () => {
-        s3MockClient = new S3Client({ forcePathStyle: true, region: 'us-east-1', endpoint: 'http://localhost:9090' });
+        s3MockClient = new S3Client({ forcePathStyle: true, endpoint: process.env["S3_MOCK_ENDPOINT"] ?? 'http://localhost:9090' });
 
         const mockS3Buckets = {
             ['mocked-bucket-1']: [

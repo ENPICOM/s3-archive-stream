@@ -17,6 +17,7 @@ jobs:
       AWS_ACCESS_KEY_ID:
       AWS_SECRET_ACCESS_KEY:
       AWS_REGION: us-east-1
+      S3_MOCK_ENDPOINT: http://s3mock:9090
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
