@@ -9,7 +9,7 @@ const mockS3Buckets = {
 };
 
 // Local S3 Mock server provided by adobe/s3mock container
-const s3MockClient = new S3Client({ forcePathStyle: true, endpoint: 'http://localhost:9090' });
+const s3MockClient = new S3Client({ forcePathStyle: true, region: 'us-east-1', endpoint: 'http://localhost:9090' });
 await createMockedFiles(s3MockClient, mockS3Buckets);
 
 // Create express app
