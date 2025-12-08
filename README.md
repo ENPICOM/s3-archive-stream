@@ -52,6 +52,7 @@ Returns an `Archiver` instance, for more information and API reference, check [h
 ### Stream to file
 
 ```ts
+import { S3Client } from '@aws-sdk/client-s3';
 import fs from 'fs'
 import { s3ArchiveStream } from 's3-archive-stream';
 
@@ -93,6 +94,7 @@ s3ArchiveStream(new S3Client(), filesToZip).pipe(fileStream);
 
 If you want to zip files coming from multiple s3 buckets, simply supply a mapping instead of a single `S3Client`
 ```ts
+import { S3Client } from '@aws-sdk/client-s3';
 import fs from 'fs';
 import { s3ArchiveStream } from 's3-archive-stream';
 
@@ -125,6 +127,7 @@ s3ArchiveStream(
 Aside from writing the archive stream to file, you can also easily write it to a HTTP GET response. The `example` directory contains a working example of how to use this with `express`.
 
 ```ts
+import { S3Client } from '@aws-sdk/client-s3';
 import express from 'express';
 import { s3ArchiveStream } from 's3-archive-stream';
 
@@ -194,16 +197,14 @@ await upload.done();
 
 You can run the examples in the `example` directory by running:
 
-1. `docker-compose up -d` to spin up the S3 mock server
+1. `docker-compose up -d ; docker compose down --remove-orphans` to spin up the S3 mock server and clean up when done (Ctrl+C)
 2. Choose one of the following tests:
     - `npm run example-express` - for writing the archive to a HTTP response as a download
     - `npm run example-file` - for writing the archive to file
-3. `docker-compose down` when you are done
 
 ## Tests
 
 You can run the tests by running:
 
-1. `docker-compose up -d` to spin up the S3 mock server
+1. `docker-compose up -d; docker compose down --remove-orphans` to spin up the S3 mock server and clean up when done (Ctrl+C)
 2. `npm run test` to run the tests
-3. `docker-compose down` when you are done 
