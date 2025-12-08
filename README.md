@@ -20,12 +20,27 @@ npm install s3-archive-stream
 ```ts
  const archiveStream = s3ArchiveStream(clientOrClients, entries, options);
 ```
-| Argument          | Description |
-| ----------------- | ----------- |
-| `clientOrClients: S3Client \| Record<string, S3Client>`   | `S3Client` instance or an object mapping of s3BucketName -> `S3Client`  |
-| `entries: S3ArchiveStreamEntry[]` | The entries to be added to the archive. Can be either files or directory entries. Additionally, [`archiver.EntryData`](https://www.archiverjs.com/docs/archiver#entry-data) options are also available.<br/> <br/><b>File</b><br/>{<br/>&nbsp;&nbsp;&nbsp;&nbsp;`s3BucketName: string;`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`s3Key: string;`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`name?: string;`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`preserveFolderStructure?: boolean;`<br/>}<br/><br/><b>Directory</b><br/>{<br/>&nbsp;&nbsp;&nbsp;&nbsp;`s3BucketName: string;`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`s3Dir: string;`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`preserveFolderStructure?: boolean;`<br/>}  |
-| `options.format?: archiver.Format`    | Either `'zip'` or `'tar'` |
-| `options.archiverOptions?: archiver.ArchiverOptions`  | [`archiver.ArchiverOptions`](https://www.archiverjs.com/docs/archiver#options) |
+- `clientOrClients: S3Client | Record<string, S3Client>` - S3Client instance or an object mapping of s3BucketName -> S3Client
+- `entries: S3ArchiveStreamEntry[]` - The entries to be added to the archive. Can be either files or directory entries. Additionally, [`archiver.EntryData`](https://www.archiverjs.com/docs/archiver#entry-data) options are also available.
+    **File**
+    ```ts
+    {
+        s3BucketName: string;
+        s3Key: string;
+        name?: string;
+        preserveFolderStructure?: boolean;
+    }
+    ```
+    **Directory**
+    ```ts
+    {
+        s3BucketName: string;
+        s3Dir: string;
+        preserveFolderStructure?: boolean;
+    }
+    ```
+- `options.format?: archiver.Format` - Either `'zip'` or `'tar'`
+- `options.archiverOptions?: archiver.ArchiverOptions` - [`archiver.ArchiverOptions`](https://www.archiverjs.com/docs/archiver#options)
 
 Returns an `Archiver` instance, for more information and API reference, check [https://www.archiverjs.com/docs/archiver](https://www.archiverjs.com/docs/archiver)
 
