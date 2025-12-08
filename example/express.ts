@@ -1,17 +1,16 @@
 import { S3Client } from '@aws-sdk/client-s3';
-import { mockClient } from 'aws-sdk-client-mock';
 import express from 'express';
 import { s3ArchiveStream } from '../src';
-import { addS3MockCommands } from '../test/mockClient';
+import { createMockedFiles } from '../test/createMockedBuckets';
 
-// Mock the bucket contents. These can be found in the ./test/ folder
-const mockS3Bucket = {
-    mockedBucket1: ['test_file1.txt', 'test_file2.txt'],
+// Mock the bucket contents.
+const mockS3Buckets = {
+    ['mocked-bucket-1']: ['test_file1.txt', 'test_file2.txt'],
 };
 
-// Mock AWS S3 SDK so we don't have to actually call an S3 bucket
-const s3Mock = mockClient(S3Client);
-addS3MockCommands(s3Mock, mockS3Bucket);
+// Local S3 Mock server provided by adobe/s3mock container
+const s3MockClient = new S3Client({ forcePathStyle: true, endpoint: 'http://localhost:9090' });
+await createMockedFiles(s3MockClient, mockS3Buckets);
 
 // Create express app
 const app = express();
@@ -23,17 +22,17 @@ app.get('/download-me', (_req, res) => {
         {
             name: 'my_archive_filename1.txt',
             s3Key: 'test_file1.txt',
-            s3BucketName: 'mockedBucket1',
+            s3BucketName: 'mocked-bucket-1',
         },
         {
             name: 'my_archive_filename2.txt',
             s3Key: 'test_file2.txt',
-            s3BucketName: 'mockedBucket1',
+            s3BucketName: 'mocked-bucket-1',
         },
     ];
 
     // Create the archive stream and directly pipe it to the response
-    s3ArchiveStream(new S3Client({}), filesToZip).pipe(res);
+    s3ArchiveStream(s3MockClient, filesToZip).pipe(res);
 });
 
 app.listen(port, () => {

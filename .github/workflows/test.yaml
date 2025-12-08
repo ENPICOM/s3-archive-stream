@@ -8,6 +8,11 @@ jobs:
   test:
     name: Test s3-archive-stream
     runs-on: ubuntu-latest
+    services:
+      s3mock:
+        image: adobe/s3mock
+        ports:
+          - 9090:9090
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5

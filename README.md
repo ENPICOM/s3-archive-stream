@@ -177,6 +177,18 @@ await upload.done();
 
 ## Examples
 
-You can run the examples in the `example` directory with the following command:
-- `npm run example-express` - for writing the archive to a HTTP response as a download
-- `npm run example-file` - for writing the archive to file
+You can run the examples in the `example` directory by running:
+
+1. `docker-compose up -d` to spin up the S3 mock server
+2. Choose one of the following tests:
+    - `npm run example-express` - for writing the archive to a HTTP response as a download
+    - `npm run example-file` - for writing the archive to file
+3. `docker-compose down` when you are done
+
+## Tests
+
+You can run the tests by running:
+
+1. `docker-compose up -d` to spin up the S3 mock server
+2. `npm run test` to run the tests
+3. `docker-compose down` when you are done 

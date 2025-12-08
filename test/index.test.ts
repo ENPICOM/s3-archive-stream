@@ -1,30 +1,34 @@
 import { S3Client } from '@aws-sdk/client-s3';
 import AdmZip from 'adm-zip';
-import { mockClient } from 'aws-sdk-client-mock';
 import fs from 'fs';
 import { text } from 'stream/consumers';
 import tar from 'tar-stream';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { s3ArchiveStream } from '../src';
-import { addS3MockCommands } from './mockClient';
+import { createMockedFiles } from './createMockedBuckets';
 
-const mockS3Bucket = {
-    mockedBucket1: [
-        'folder1/folder2/folder3/file1.txt',
-        'folder1/folder2/folder3/file2.txt',
-        'folder1/folder2/folder3/file3.txt',
-        'test_file1.txt',
-        'test_file2.txt',
-        'test_file3.txt',
-        'test_file4.txt',
-    ],
-    mockedBucket2: ['test_file1.txt', 'test_file2.txt', 'test_file3.txt', 'test_file4.txt'],
-};
-
-const s3Mock = mockClient(S3Client);
-addS3MockCommands(s3Mock, mockS3Bucket);
+let s3MockClient: S3Client;
 
 describe('s3-archive-stream tests', async () => {
+    beforeAll(async () => {
+        s3MockClient = new S3Client({ forcePathStyle: true, endpoint: 'http://localhost:9090' });
+
+        const mockS3Buckets = {
+            ['mocked-bucket-1']: [
+                'folder1/folder2/folder3/file1.txt',
+                'folder1/folder2/folder3/file2.txt',
+                'folder1/folder2/folder3/file3.txt',
+                'test_file1.txt',
+                'test_file2.txt',
+                'test_file3.txt',
+                'test_file4.txt',
+            ],
+            ['mocked-bucket-2']: ['test_file1.txt', 'test_file2.txt', 'test_file3.txt', 'test_file4.txt'],
+        };
+
+        await createMockedFiles(s3MockClient, mockS3Buckets);
+    });
+
     it('should zip files from a bucket', async () => {
         // Configure the output zip
         const outputArchiveName = './output_test1.zip';
@@ -35,17 +39,17 @@ describe('s3-archive-stream tests', async () => {
             {
                 name: 'my_archive_filename1.txt',
                 s3Key: 'test_file1.txt',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
             },
             {
                 name: 'my_archive_filename2.txt',
                 s3Key: 'test_file2.txt',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
             },
         ];
 
         // Create the stream archive
-        const archive = s3ArchiveStream(new S3Client({}), filesToZip);
+        const archive = s3ArchiveStream(s3MockClient, filesToZip);
         archive.pipe(file).addListener('finished', () => {
             const zip = new AdmZip(outputArchiveName);
 
@@ -73,28 +77,28 @@ describe('s3-archive-stream tests', async () => {
             {
                 name: 'my_archive_filename1.txt',
                 s3Key: 'test_file1.txt',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
             },
             {
                 name: 'my_archive_filename2.txt',
                 s3Key: 'test_file2.txt',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
             },
             {
                 name: 'my_archive_filename3.txt',
                 s3Key: 'test_file3.txt',
-                s3BucketName: 'mockedBucket2',
+                s3BucketName: 'mocked-bucket-2',
             },
             {
                 name: 'my_archive_filename4.txt',
                 s3Key: 'test_file4.txt',
-                s3BucketName: 'mockedBucket2',
+                s3BucketName: 'mocked-bucket-2',
             },
         ];
 
         // Create the stream archive
         const archive = s3ArchiveStream(
-            { mockedBucket1: new S3Client({}), mockedBucket2: new S3Client({}) },
+            { ['mocked-bucket-1']: s3MockClient, ['mocked-bucket-2']: s3MockClient },
             filesToZip,
         );
         archive.pipe(file).addListener('finished', () => {
@@ -128,16 +132,16 @@ describe('s3-archive-stream tests', async () => {
             {
                 name: 'my_archive_filename1.txt',
                 s3Key: 'test_file1.txt',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
             },
             {
                 s3Dir: 'folder1/',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
             },
         ];
 
         // Create the stream archive
-        const archive = s3ArchiveStream(new S3Client({}), filesToZip);
+        const archive = s3ArchiveStream(s3MockClient, filesToZip);
         archive.pipe(file).addListener('finished', () => {
             const zip = new AdmZip(outputArchiveName);
 
@@ -149,11 +153,11 @@ describe('s3-archive-stream tests', async () => {
             const file1Contents = zip.readAsText(filesToZip[0].name);
             expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
             const file2Contents = zip.readAsText('folder2/folder3/file1.txt');
-            expect(file2Contents).toBe('mockedBucket1/folder1/folder2/folder3/file1.txt');
+            expect(file2Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file1.txt');
             const file3Contents = zip.readAsText('folder2/folder3/file2.txt');
-            expect(file3Contents).toBe('mockedBucket1/folder1/folder2/folder3/file2.txt');
+            expect(file3Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file2.txt');
             const file4Contents = zip.readAsText('folder2/folder3/file3.txt');
-            expect(file4Contents).toBe('mockedBucket1/folder1/folder2/folder3/file3.txt');
+            expect(file4Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file3.txt');
         });
 
         // Wait a bit for the zip to have been written and the on('finish') to have been resolved
@@ -170,12 +174,12 @@ describe('s3-archive-stream tests', async () => {
             {
                 s3Dir: 'folder1/',
                 preserveFolderStructure: true,
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
             },
         ];
 
         // Create the stream archive
-        const archive = s3ArchiveStream(new S3Client({}), filesToZip);
+        const archive = s3ArchiveStream(s3MockClient, filesToZip);
         archive.pipe(file).addListener('finished', () => {
             const zip = new AdmZip(outputArchiveName);
 
@@ -184,11 +188,11 @@ describe('s3-archive-stream tests', async () => {
 
             // Check the file contents
             const file2Contents = zip.readAsText('folder1/folder2/folder3/file1.txt');
-            expect(file2Contents).toBe('mockedBucket1/folder1/folder2/folder3/file1.txt');
+            expect(file2Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file1.txt');
             const file3Contents = zip.readAsText('folder1/folder2/folder3/file2.txt');
-            expect(file3Contents).toBe('mockedBucket1/folder1/folder2/folder3/file2.txt');
+            expect(file3Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file2.txt');
             const file4Contents = zip.readAsText('folder1/folder2/folder3/file3.txt');
-            expect(file4Contents).toBe('mockedBucket1/folder1/folder2/folder3/file3.txt');
+            expect(file4Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file3.txt');
         });
 
         // Wait a bit for the zip to have been written and the on('finish') to have been resolved
@@ -204,16 +208,16 @@ describe('s3-archive-stream tests', async () => {
         const filesToZip = [
             {
                 s3Key: 'folder1/folder2/folder3/file1.txt',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
             },
             {
                 s3Key: 'folder1/folder2/folder3/file2.txt',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
             },
         ];
 
         // Create the stream archive
-        const archive = s3ArchiveStream(new S3Client({}), filesToZip);
+        const archive = s3ArchiveStream(s3MockClient, filesToZip);
         archive.pipe(file).addListener('finished', () => {
             const zip = new AdmZip(outputArchiveName);
 
@@ -240,18 +244,18 @@ describe('s3-archive-stream tests', async () => {
         const filesToZip = [
             {
                 s3Key: 'folder1/folder2/folder3/file1.txt',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
                 preserveFolderStructure: true,
             },
             {
                 s3Key: 'folder1/folder2/folder3/file2.txt',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
                 preserveFolderStructure: true,
             },
         ];
 
         // Create the stream archive
-        const archive = s3ArchiveStream(new S3Client({}), filesToZip);
+        const archive = s3ArchiveStream(s3MockClient, filesToZip);
         archive.pipe(file).addListener('finish', () => {
             const zip = new AdmZip(outputArchiveName);
 
@@ -279,27 +283,27 @@ describe('s3-archive-stream tests', async () => {
             {
                 name: 'my_archive_filename1.txt',
                 s3Key: 'test_file1.txt',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
             },
             {
                 name: 'my_archive_filename2.txt',
                 s3Key: 'test_file2.txt',
-                s3BucketName: 'mockedBucket1',
+                s3BucketName: 'mocked-bucket-1',
             },
             {
                 name: 'my_archive_filename3.txt',
                 s3Key: 'test_file3.txt',
-                s3BucketName: 'mockedBucket2',
+                s3BucketName: 'mocked-bucket-2',
             },
             {
                 name: 'my_archive_filename4.txt',
                 s3Key: 'test_file4.txt',
-                s3BucketName: 'mockedBucket2',
+                s3BucketName: 'mocked-bucket-2',
             },
         ];
 
         // Create the stream archive
-        const archive = s3ArchiveStream(new S3Client({}), filesToTar, { format: 'tar' });
+        const archive = s3ArchiveStream(s3MockClient, filesToTar, { format: 'tar' });
         archive.pipe(file).addListener('finish', async () => {
             const tarFiles: Record<string, string> = {};
 
