@@ -13,11 +13,6 @@ jobs:
         image: adobe/s3mock
         ports:
           - 9090:9090
-    env:
-      AWS_ACCESS_KEY_ID:
-      AWS_SECRET_ACCESS_KEY:
-      AWS_REGION: us-east-1
-      S3_MOCK_ENDPOINT: http://s3mock:9090
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -29,3 +24,8 @@ jobs:
       - run: npm ci
       - run: npm run fix-check
       - run: npm run test
+        env:
+          AWS_ACCESS_KEY_ID:
+          AWS_SECRET_ACCESS_KEY:
+          AWS_REGION: us-east-1
+          S3_MOCK_ENDPOINT: http://s3mock:9090
