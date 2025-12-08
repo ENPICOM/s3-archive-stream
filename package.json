@@ -16,6 +16,7 @@
         "fix": "npx --no-install @biomejs/biome check --formatter-enabled=true --linter-enabled=true --assist-enabled=true --write",
         "fix-check": "npx --no-install @biomejs/biome check --formatter-enabled=true --linter-enabled=true --assist-enabled=true",
         "test": "npx --no-install vitest --coverage",
+        "test:coverage": "npx --no-install vitest --coverage --coverage.reporter=json-summary && jq .total coverage/coverage-summary.json > ./coverage.json && rm -rf ./coverage",
         "example-express": "npx tsx ./example/express.ts",
         "example-file": "npx tsx ./example/file.ts",
         "example-s3": "npx tsx ./example/s3.ts"

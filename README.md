@@ -1,6 +1,6 @@
 # s3-archive-stream
 
-[![Test s3-archive-stream](https://github.com/ENPICOM/s3-archive-stream/actions/workflows/test.yaml/badge.svg)](https://github.com/ENPICOM/s3-archive-stream/actions/workflows/test.yaml) ![NPM Version](https://img.shields.io/npm/v/s3-archive-stream)
+[![Test s3-archive-stream](https://github.com/ENPICOM/s3-archive-stream/actions/workflows/test.yaml/badge.svg)](https://github.com/ENPICOM/s3-archive-stream/actions/workflows/test.yaml) ![NPM Version](https://img.shields.io/npm/v/s3-archive-stream) ![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FENPICOM%2Fs3-archive-stream%2Frefs%2Fheads%2Fmain%2Fcoverage.json&query=%24.statements.pct&suffix=%20%25&label=coverage&color=4c1)
 
 A NodeJS utility to stream-zip S3 objects into a single archive using [Archiver](https://www.archiverjs.com/) and the [AWS SDK](https://github.com/aws/aws-sdk-js-v3).
 

@@ -4,7 +4,7 @@ on:
     types: [published]
 permissions:
   id-token: write
-  contents: read
+  contents: write
 jobs:
   test:
     name: Publish s3-archive-stream
@@ -29,8 +29,15 @@ jobs:
       - name: Check code style
         run: npm run fix-check
       - name: Run tests
-        run: npm run test
+        run: npm run test:coverage
       - name: Build package
         run: npm run clean:build
       - name: Publish to NPM registry
         run: npm publish --access public
+      - name: Commit coverage report
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add ./coverage.json
+          git commit -m "chore: update code coverage summary"
+          git push
