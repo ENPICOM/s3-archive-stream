@@ -11,7 +11,7 @@ let s3MockClient: S3Client;
 
 describe('s3-archive-stream tests', async () => {
     beforeAll(async () => {
-        s3MockClient = new S3Client({ forcePathStyle: true, endpoint: 'http://localhost:9090' });
+        s3MockClient = new S3Client({ forcePathStyle: true, region: 'us-east-1', endpoint: 'http://localhost:9090' });
 
         const mockS3Buckets = {
             ['mocked-bucket-1']: [
