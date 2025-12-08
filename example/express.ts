@@ -8,7 +8,7 @@ const mockS3Buckets = {
     ['mocked-bucket-1']: ['test_file1.txt', 'test_file2.txt'],
 };
 
-// Local S3 Mock server provided by adobe/s3mock container
+// Local S3 Mock server provided by adobe/s3mock container.
 const s3MockClient = new S3Client({
     forcePathStyle: true,
     region: 'us-east-1',
@@ -17,11 +17,11 @@ const s3MockClient = new S3Client({
 });
 await createMockedFiles(s3MockClient, mockS3Buckets);
 
-// Create express app
+// Create express app.
 const app = express();
 const port = 3000;
 
-// Add GET /download-me endpoint
+// Add GET /download-me endpoint.
 app.get('/download-me', (_req, res) => {
     const filesToZip = [
         {
@@ -36,7 +36,7 @@ app.get('/download-me', (_req, res) => {
         },
     ];
 
-    // Create the archive stream and directly pipe it to the response
+    // Create the archive stream and directly pipe it to the response.
     s3ArchiveStream(s3MockClient, filesToZip).pipe(res);
 });
 

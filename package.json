@@ -17,7 +17,8 @@
         "fix-check": "npx --no-install @biomejs/biome check --formatter-enabled=true --linter-enabled=true --assist-enabled=true",
         "test": "npx --no-install vitest --coverage",
         "example-express": "npx tsx ./example/express.ts",
-        "example-file": "npx tsx ./example/file.ts"
+        "example-file": "npx tsx ./example/file.ts",
+        "example-s3": "npx tsx ./example/s3.ts"
     },
     "repository": {
         "type": "git",
@@ -34,6 +35,7 @@
         "archiver": "^7.0.1"
     },
     "devDependencies": {
+        "@aws-sdk/lib-storage": "^3.946.0",
         "@biomejs/biome": "2.2.4",
         "@types/adm-zip": "^0.5.7",
         "@types/archiver": "6.0.3",

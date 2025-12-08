@@ -204,6 +204,7 @@ You can run the examples in the `example` directory by running:
 2. Choose one of the following tests:
     - `npm run example-express` - for writing the archive to a HTTP response as a download
     - `npm run example-file` - for writing the archive to file
+    - `npm run example-s3` - for directly uploading the archive back to S3
 3. `docker-compose down --remove-orphans` to clean up when done
 
 ## Tests

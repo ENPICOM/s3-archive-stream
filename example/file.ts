@@ -8,7 +8,7 @@ const mockS3Buckets = {
     ['mocked-bucket-1']: ['test_file1.txt', 'test_file2.txt'],
 };
 
-// Local S3 Mock server provided by adobe/s3mock container
+// Local S3 Mock server provided by adobe/s3mock container.
 const s3MockClient = new S3Client({
     forcePathStyle: true,
     region: 'us-east-1',
@@ -30,7 +30,7 @@ const filesToZip = [
     },
 ];
 
-// Create writeStream for the target output zip
+// Create writeStream for the target output zip.
 const outputFile = fs.createWriteStream('./output.zip', 'utf-8');
-// Create the archive stream and pipe it to the output zip
+// Create the archive stream and pipe it to the output zip.
 s3ArchiveStream(s3MockClient, filesToZip).pipe(outputFile);
