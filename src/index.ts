@@ -29,18 +29,20 @@ class FailedToListObjectsError extends S3ArchiveStreamError {
 type S3BucketName = string;
 type S3Key = string;
 
-type S3ArchiveStreamEntry = Omit<EntryData, 'name'> & {
+type S3ArchiveStreamFileEntry = Omit<EntryData, 'name'> & {
+    name?: string;
     s3BucketName: S3BucketName;
+    s3Key: S3Key;
     preserveFolderStructure?: boolean;
-} & (
-        | {
-              s3Key: S3Key;
-              name?: string;
-          }
-        | {
-              s3Dir: S3Key;
-          }
-    );
+};
+
+type S3ArchiveStreamDirEntry = Omit<EntryData, 'name'> & {
+    s3BucketName: S3BucketName;
+    s3Dir: S3Key;
+    preserveFolderStructure?: boolean;
+};
+
+type S3ArchiveStreamEntry = S3ArchiveStreamFileEntry | S3ArchiveStreamDirEntry;
 
 interface S3ArchiveStreamOptions {
     format?: Format;
@@ -191,4 +193,11 @@ function s3ArchiveStream(
     return archive;
 }
 
-export { s3ArchiveStream, type S3ArchiveStreamEntry, type S3ArchiveStreamError, type S3ArchiveStreamOptions };
+export {
+    s3ArchiveStream,
+    type S3ArchiveStreamEntry,
+    type S3ArchiveStreamFileEntry,
+    type S3ArchiveStreamDirEntry,
+    type S3ArchiveStreamError,
+    type S3ArchiveStreamOptions,
+};

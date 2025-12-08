@@ -1,6 +1,6 @@
 {
     "name": "s3-archive-stream",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "description": "A NodeJS utility to stream-zip S3 objects into a single archive using Archiver and AWS SDK",
     "main": "./dist/index.js",
     "type": "module",

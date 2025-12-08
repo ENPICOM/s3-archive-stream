@@ -20,5 +20,7 @@ jobs:
         run: npm run fix-check
       - name: Run tests
         run: npm run test
+      - name: Build package
+        run: npm run clean:build
       - name: Publish to NPM registry
         run: npm publish --access public
