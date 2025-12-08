@@ -1,5 +1,7 @@
 # s3-archive-stream
 
+[![Test s3-archive-stream](https://github.com/ENPICOM/s3-archive-stream/actions/workflows/test.yaml/badge.svg)](https://github.com/ENPICOM/s3-archive-stream/actions/workflows/test.yaml) ![NPM Version](https://img.shields.io/npm/v/s3-archive-stream)
+
 A NodeJS utility to stream-zip S3 objects into a single archive using [Archiver](https://www.archiverjs.com/) and the [AWS SDK](https://github.com/aws/aws-sdk-js-v3).
 
 ## Motivation
