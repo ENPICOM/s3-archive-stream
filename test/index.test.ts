@@ -1,10 +1,11 @@
-import { S3Client } from '@aws-sdk/client-s3';
+import { NoSuchBucket, NoSuchKey, S3Client } from '@aws-sdk/client-s3';
 import AdmZip from 'adm-zip';
+import type { ArchiverError } from 'archiver';
 import fs from 'fs';
 import { text } from 'stream/consumers';
 import tar from 'tar-stream';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { s3ArchiveStream } from '../src';
+import { S3ArchiveStreamError, s3ArchiveStream } from '../src';
 import { createMockedFiles } from './mocks3Objects';
 
 let s3MockClient: S3Client;
@@ -53,23 +54,22 @@ describe('s3-archive-stream tests', async () => {
             },
         ];
 
-        // Create the stream archive
+        // Create the archive stream
         const archive = s3ArchiveStream(s3MockClient, filesToZip);
-        archive.pipe(file).addListener('finished', () => {
-            const zip = new AdmZip(outputArchiveName);
-
-            // Check the entries
-            expect(zip.getEntries().length).toBe(2);
-
-            // Check the file contents
-            const file1Contents = zip.readAsText(filesToZip[0].name);
-            expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
-            const file2Contents = zip.readAsText(filesToZip[1].name);
-            expect(file2Contents).toBe(`${filesToZip[1].s3BucketName}/${filesToZip[1].s3Key}`);
+        await new Promise<void>((resolve) => {
+            archive.pipe(file).addListener('finish', resolve);
         });
 
-        // Wait a bit for the zip to have been written and the on('finish') to have been resolved
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const zip = new AdmZip(outputArchiveName);
+
+        // Check the entries
+        expect(zip.getEntries().length).toBe(2);
+
+        // Check the file contents
+        const file1Contents = zip.readAsText(filesToZip[0].name);
+        expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
+        const file2Contents = zip.readAsText(filesToZip[1].name);
+        expect(file2Contents).toBe(`${filesToZip[1].s3BucketName}/${filesToZip[1].s3Key}`);
     });
 
     it('should zip files from multiple buckets', async () => {
@@ -101,30 +101,29 @@ describe('s3-archive-stream tests', async () => {
             },
         ];
 
-        // Create the stream archive
+        // Create the archive stream
         const archive = s3ArchiveStream(
             { ['mocked-bucket-1']: s3MockClient, ['mocked-bucket-2']: s3MockClient },
             filesToZip,
         );
-        archive.pipe(file).addListener('finished', () => {
-            const zip = new AdmZip(outputArchiveName);
-
-            // Check the entries
-            expect(zip.getEntries().length).toBe(4);
-
-            // Check the file contents
-            const file1Contents = zip.readAsText(filesToZip[0].name);
-            expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
-            const file2Contents = zip.readAsText(filesToZip[1].name);
-            expect(file2Contents).toBe(`${filesToZip[1].s3BucketName}/${filesToZip[1].s3Key}`);
-            const file3Contents = zip.readAsText(filesToZip[2].name);
-            expect(file3Contents).toBe(`${filesToZip[2].s3BucketName}/${filesToZip[2].s3Key}`);
-            const file4Contents = zip.readAsText(filesToZip[3].name);
-            expect(file4Contents).toBe(`${filesToZip[3].s3BucketName}/${filesToZip[3].s3Key}`);
+        await new Promise<void>((resolve) => {
+            archive.pipe(file).addListener('finish', resolve);
         });
 
-        // Wait a bit for the zip to have been written and the on('finish') to have been resolved
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const zip = new AdmZip(outputArchiveName);
+
+        // Check the entries
+        expect(zip.getEntries().length).toBe(4);
+
+        // Check the file contents
+        const file1Contents = zip.readAsText(filesToZip[0].name);
+        expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
+        const file2Contents = zip.readAsText(filesToZip[1].name);
+        expect(file2Contents).toBe(`${filesToZip[1].s3BucketName}/${filesToZip[1].s3Key}`);
+        const file3Contents = zip.readAsText(filesToZip[2].name);
+        expect(file3Contents).toBe(`${filesToZip[2].s3BucketName}/${filesToZip[2].s3Key}`);
+        const file4Contents = zip.readAsText(filesToZip[3].name);
+        expect(file4Contents).toBe(`${filesToZip[3].s3BucketName}/${filesToZip[3].s3Key}`);
     });
 
     it('should zip folders and files', async () => {
@@ -145,28 +144,27 @@ describe('s3-archive-stream tests', async () => {
             },
         ];
 
-        // Create the stream archive
+        // Create the archive stream
         const archive = s3ArchiveStream(s3MockClient, filesToZip);
-        archive.pipe(file).addListener('finished', () => {
-            const zip = new AdmZip(outputArchiveName);
-
-            // Check the entries
-            expect(zip.getEntries().length).toBe(4);
-
-            // Check the file contents
-            // @ts-expect-error
-            const file1Contents = zip.readAsText(filesToZip[0].name);
-            expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
-            const file2Contents = zip.readAsText('folder2/folder3/file1.txt');
-            expect(file2Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file1.txt');
-            const file3Contents = zip.readAsText('folder2/folder3/file2.txt');
-            expect(file3Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file2.txt');
-            const file4Contents = zip.readAsText('folder2/folder3/file3.txt');
-            expect(file4Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file3.txt');
+        await new Promise<void>((resolve) => {
+            archive.pipe(file).addListener('finish', resolve);
         });
 
-        // Wait a bit for the zip to have been written and the on('finish') to have been resolved
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const zip = new AdmZip(outputArchiveName);
+
+        // Check the entries
+        expect(zip.getEntries().length).toBe(4);
+
+        // Check the file contents
+        // @ts-expect-error
+        const file1Contents = zip.readAsText(filesToZip[0].name);
+        expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
+        const file2Contents = zip.readAsText('folder2/folder3/file1.txt');
+        expect(file2Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file1.txt');
+        const file3Contents = zip.readAsText('folder2/folder3/file2.txt');
+        expect(file3Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file2.txt');
+        const file4Contents = zip.readAsText('folder2/folder3/file3.txt');
+        expect(file4Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file3.txt');
     });
 
     it('should zip folders when preserveFolderStructure=true', async () => {
@@ -183,25 +181,24 @@ describe('s3-archive-stream tests', async () => {
             },
         ];
 
-        // Create the stream archive
+        // Create the archive stream
         const archive = s3ArchiveStream(s3MockClient, filesToZip);
-        archive.pipe(file).addListener('finished', () => {
-            const zip = new AdmZip(outputArchiveName);
-
-            // Check the entries
-            expect(zip.getEntries().length).toBe(3);
-
-            // Check the file contents
-            const file2Contents = zip.readAsText('folder1/folder2/folder3/file1.txt');
-            expect(file2Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file1.txt');
-            const file3Contents = zip.readAsText('folder1/folder2/folder3/file2.txt');
-            expect(file3Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file2.txt');
-            const file4Contents = zip.readAsText('folder1/folder2/folder3/file3.txt');
-            expect(file4Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file3.txt');
+        await new Promise<void>((resolve) => {
+            archive.pipe(file).addListener('finish', resolve);
         });
 
-        // Wait a bit for the zip to have been written and the on('finish') to have been resolved
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const zip = new AdmZip(outputArchiveName);
+
+        // Check the entries
+        expect(zip.getEntries().length).toBe(3);
+
+        // Check the file contents
+        const file2Contents = zip.readAsText('folder1/folder2/folder3/file1.txt');
+        expect(file2Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file1.txt');
+        const file3Contents = zip.readAsText('folder1/folder2/folder3/file2.txt');
+        expect(file3Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file2.txt');
+        const file4Contents = zip.readAsText('folder1/folder2/folder3/file3.txt');
+        expect(file4Contents).toBe('mocked-bucket-1/folder1/folder2/folder3/file3.txt');
     });
 
     it('should strip folder structures by default', async () => {
@@ -221,23 +218,22 @@ describe('s3-archive-stream tests', async () => {
             },
         ];
 
-        // Create the stream archive
+        // Create the archive stream
         const archive = s3ArchiveStream(s3MockClient, filesToZip);
-        archive.pipe(file).addListener('finished', () => {
-            const zip = new AdmZip(outputArchiveName);
-
-            // Check the entries
-            expect(zip.getEntries().length).toBe(2);
-
-            // Check the file contents
-            const file1Contents = zip.readAsText('file1.txt');
-            expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
-            const file2Contents = zip.readAsText('file2.txt');
-            expect(file2Contents).toBe(`${filesToZip[1].s3BucketName}/${filesToZip[1].s3Key}`);
+        await new Promise<void>((resolve) => {
+            archive.pipe(file).addListener('finish', resolve);
         });
 
-        // Wait a bit for the zip to have been written and the on('finish') to have been resolved
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const zip = new AdmZip(outputArchiveName);
+
+        // Check the entries
+        expect(zip.getEntries().length).toBe(2);
+
+        // Check the file contents
+        const file1Contents = zip.readAsText('file1.txt');
+        expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
+        const file2Contents = zip.readAsText('file2.txt');
+        expect(file2Contents).toBe(`${filesToZip[1].s3BucketName}/${filesToZip[1].s3Key}`);
     });
 
     it('should preserve folder structure of files when preserveFolderStrucure:true', async () => {
@@ -259,23 +255,22 @@ describe('s3-archive-stream tests', async () => {
             },
         ];
 
-        // Create the stream archive
+        // Create the archive stream
         const archive = s3ArchiveStream(s3MockClient, filesToZip);
-        archive.pipe(file).addListener('finish', () => {
-            const zip = new AdmZip(outputArchiveName);
-
-            // Check the entries
-            expect(zip.getEntries().length).toBe(2);
-
-            // Check the file contents
-            const file1Contents = zip.readAsText('folder1/folder2/folder3/file1.txt');
-            expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
-            const file2Contents = zip.readAsText('folder1/folder2/folder3/file2.txt');
-            expect(file2Contents).toBe(`${filesToZip[1].s3BucketName}/${filesToZip[1].s3Key}`);
+        await new Promise<void>((resolve) => {
+            archive.pipe(file).addListener('finish', resolve);
         });
 
-        // Wait a bit for the zip to have been written and the on('finish') to have been resolved
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const zip = new AdmZip(outputArchiveName);
+
+        // Check the entries
+        expect(zip.getEntries().length).toBe(2);
+
+        // Check the file contents
+        const file1Contents = zip.readAsText('folder1/folder2/folder3/file1.txt');
+        expect(file1Contents).toBe(`${filesToZip[0].s3BucketName}/${filesToZip[0].s3Key}`);
+        const file2Contents = zip.readAsText('folder1/folder2/folder3/file2.txt');
+        expect(file2Contents).toBe(`${filesToZip[1].s3BucketName}/${filesToZip[1].s3Key}`);
     });
 
     it('should output a tar if format:tar', async () => {
@@ -307,33 +302,114 @@ describe('s3-archive-stream tests', async () => {
             },
         ];
 
-        // Create the stream archive
+        // Create the archive stream
         const archive = s3ArchiveStream(s3MockClient, filesToTar, { format: 'tar' });
-        archive.pipe(file).addListener('finish', async () => {
-            const tarFiles: Record<string, string> = {};
-
-            // Setup tar extraction
-            const extract = tar.extract();
-            // Pipe the .tar to the extractor
-            fs.createReadStream(outputArchiveName).pipe(extract);
-
-            // Read the tar entries
-            for await (const entry of extract) {
-                tarFiles[entry.header.name] = await text(entry);
-                entry.resume();
-            }
-
-            // Check the entries
-            expect(Object.entries(tarFiles).length).toBe(4);
-
-            // Check the file contents
-            expect(tarFiles[filesToTar[0].name]).toBe(`${filesToTar[0].s3BucketName}/${filesToTar[0].s3Key}`);
-            expect(tarFiles[filesToTar[1].name]).toBe(`${filesToTar[1].s3BucketName}/${filesToTar[1].s3Key}`);
-            expect(tarFiles[filesToTar[2].name]).toBe(`${filesToTar[2].s3BucketName}/${filesToTar[2].s3Key}`);
-            expect(tarFiles[filesToTar[3].name]).toBe(`${filesToTar[3].s3BucketName}/${filesToTar[3].s3Key}`);
+        await new Promise<void>((resolve) => {
+            archive.pipe(file).addListener('finish', resolve);
         });
 
-        // Wait a bit for the zip to have been written and the on('finish') to have been resolved
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const tarFiles: Record<string, string> = {};
+
+        // Setup tar extraction
+        const extract = tar.extract();
+        // Pipe the .tar to the extractor
+        fs.createReadStream(outputArchiveName).pipe(extract);
+
+        // Read the tar entries
+        for await (const entry of extract) {
+            tarFiles[entry.header.name] = await text(entry);
+            entry.resume();
+        }
+
+        // Check the entries
+        expect(Object.entries(tarFiles).length).toBe(4);
+
+        // Check the file contents
+        expect(tarFiles[filesToTar[0].name]).toBe(`${filesToTar[0].s3BucketName}/${filesToTar[0].s3Key}`);
+        expect(tarFiles[filesToTar[1].name]).toBe(`${filesToTar[1].s3BucketName}/${filesToTar[1].s3Key}`);
+        expect(tarFiles[filesToTar[2].name]).toBe(`${filesToTar[2].s3BucketName}/${filesToTar[2].s3Key}`);
+        expect(tarFiles[filesToTar[3].name]).toBe(`${filesToTar[3].s3BucketName}/${filesToTar[3].s3Key}`);
+    });
+
+    it('should error when a file does not exist', async () => {
+        // This file does not exist in the bucket
+        const filesToZip = [
+            {
+                s3Key: 'doesnt_exist.txt',
+                s3BucketName: 'mocked-bucket-1',
+            },
+        ];
+
+        // Create the archive stream
+        const archive = s3ArchiveStream(s3MockClient, filesToZip);
+        const error = await new Promise<ArchiverError | S3ArchiveStreamError>((resolve) => {
+            archive.on('error', resolve);
+        });
+        expect(error).toBeInstanceOf(S3ArchiveStreamError);
+        expect(error.name).toBe('FailedToGetS3ObjectStreamError');
+
+        if ('originalError' in error) {
+            expect(error.originalError).toBeInstanceOf(NoSuchKey);
+        }
+    });
+
+    it('should error when a bucket does not exist', async () => {
+        // This file does not exist in the bucket
+        const filesToZip = [
+            {
+                s3Key: 'doesnt_exist.txt',
+                s3BucketName: 'does-not-exist',
+            },
+        ];
+
+        // Create the archive stream
+        const archive = s3ArchiveStream(s3MockClient, filesToZip);
+        const error = await new Promise<ArchiverError | S3ArchiveStreamError>((resolve) => {
+            archive.on('error', resolve);
+        });
+        expect(error).toBeInstanceOf(S3ArchiveStreamError);
+        expect(error.name).toBe('FailedToGetS3ObjectStreamError');
+
+        if ('originalError' in error) {
+            expect(error.originalError).toBeInstanceOf(NoSuchBucket);
+        }
+    });
+
+    it('should error when a bucket was not provided for an entry', async () => {
+        // This file does not exist in the bucket
+        const filesToZip = [
+            {
+                s3Key: 'doesnt_exist.txt',
+                s3BucketName: 'does-not-exist',
+            },
+        ];
+
+        // Create the archive stream
+        const archive = s3ArchiveStream({ 'mocked-bucket-1': s3MockClient }, filesToZip);
+        const error = await new Promise<ArchiverError | S3ArchiveStreamError>((resolve) => {
+            archive.on('error', resolve);
+        });
+
+        expect(error).toBeInstanceOf(S3ArchiveStreamError);
+        expect(error.name).toBe('NoS3ClientProvidedForBucketError');
+    });
+
+    it('should error when attempting to zip a non-existing dir', async () => {
+        // This file does not exist in the bucket
+        const filesToZip = [
+            {
+                s3Dir: 'doesnt-exist/',
+                s3BucketName: 'mocked-bucket-1',
+            },
+        ];
+
+        // Create the archive stream
+        const archive = s3ArchiveStream(s3MockClient, filesToZip);
+        const error = await new Promise<ArchiverError | S3ArchiveStreamError>((resolve) => {
+            archive.on('error', resolve);
+        });
+
+        expect(error).toBeInstanceOf(S3ArchiveStreamError);
+        expect(error.name).toBe('FailedToListObjectsError');
     });
 });

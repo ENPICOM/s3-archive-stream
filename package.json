@@ -15,7 +15,7 @@
         "lint-check": "npx --no-install @biomejs/biome lint",
         "fix": "npx --no-install @biomejs/biome check --formatter-enabled=true --linter-enabled=true --assist-enabled=true --write",
         "fix-check": "npx --no-install @biomejs/biome check --formatter-enabled=true --linter-enabled=true --assist-enabled=true",
-        "test": "npx --no-install vitest --silent=false",
+        "test": "npx --no-install vitest --coverage",
         "example-express": "npx tsx ./example/express.ts",
         "example-file": "npx tsx ./example/file.ts"
     },
@@ -39,11 +39,12 @@
         "@types/archiver": "6.0.3",
         "@types/express": "^5.0.6",
         "@types/tar-stream": "^3.1.4",
+        "@vitest/coverage-v8": "^4.0.15",
         "adm-zip": "^0.5.16",
         "express": "^5.2.1",
         "tar-stream": "^3.1.7",
         "typescript": "^5.9.3",
-        "vitest": "3.2.3"
+        "vitest": "^4.0.15"
     },
     "keywords": [
         "aws",

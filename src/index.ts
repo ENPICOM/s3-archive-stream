@@ -1,8 +1,26 @@
 import { GetObjectCommand, ListObjectsV2Command, type ListObjectsV2CommandOutput, S3Client } from '@aws-sdk/client-s3';
-import archiver, { type Archiver, type ArchiverOptions, type EntryData, type Format } from 'archiver';
+import archiver, {
+    type Archiver,
+    type ArchiverError,
+    type ArchiverOptions,
+    type EntryData,
+    type Format,
+    type ProgressData,
+} from 'archiver';
 import { Readable } from 'stream';
 
-class S3ArchiveStreamError extends Error {}
+class S3ArchiveStreamError extends Error {
+    originalError?: unknown;
+
+    constructor(message: string, originalError?: unknown) {
+        super(message);
+        this.originalError = originalError;
+    }
+
+    get name() {
+        return this.constructor.name;
+    }
+}
 
 class NoS3ClientProvidedForBucketError extends S3ArchiveStreamError {
     constructor(s3BucketName: string) {
@@ -14,6 +32,7 @@ class FailedToGetS3ObjectStreamError extends S3ArchiveStreamError {
     constructor(s3Key: string, e: unknown) {
         super(
             `Failed to get object stream for s3 object: ${s3Key}. Check if your IAM credentials allow you access. Original Error: ${e}`,
+            e,
         );
     }
 }
@@ -22,6 +41,7 @@ class FailedToListObjectsError extends S3ArchiveStreamError {
     constructor(s3Key: string, e: unknown) {
         super(
             `Failed to list s3 objects for directory path: ${s3Key}. Check if your IAM credentials allow you access. Original Error: ${e}`,
+            e,
         );
     }
 }
@@ -72,12 +92,20 @@ interface S3ArchiveStreamOptions {
  * @throws {NoS3ClientProvidedForBucketError} When no S3 client is available for a referenced bucket.
  * @throws {FailedToListObjectsError} When listing objects for a directory prefix fails.
  * @throws {FailedToGetS3ObjectStreamError} When retrieving an object's stream from S3 fails.
+ * @throws {ArchiverError} When an archiver-specific error occurs.
  */
 function s3ArchiveStream(
     clientOrClients: Record<S3BucketName, S3Client> | S3Client,
     entries: S3ArchiveStreamEntry[],
     options?: S3ArchiveStreamOptions,
-): Archiver {
+): Omit<Archiver, 'on'> & {
+    on(event: 'error' | 'warning', listener: (error: ArchiverError | S3ArchiveStreamError) => void): Archiver;
+    on(event: 'data', listener: (data: Buffer) => void): Archiver;
+    on(event: 'progress', listener: (progress: ProgressData) => void): Archiver;
+    on(event: 'close' | 'drain' | 'finish', listener: () => void): Archiver;
+    on(event: 'pipe' | 'unpipe', listener: (src: Readable) => void): Archiver;
+    on(event: 'entry', listener: (entry: EntryData) => void): Archiver;
+} {
     const archive = archiver(options?.format ?? 'zip', options?.archiverOptions ?? {});
 
     async function appendArchiveEntries(s3Client: S3Client, archiveEntries: typeof entries) {
@@ -102,6 +130,11 @@ function s3ArchiveStream(
                                 ContinuationToken: continuationToken,
                             }),
                         );
+
+                        if (listObjectsResponse.ContinuationToken == null && listObjectsResponse.KeyCount === 0) {
+                            throw new Error('The provided directory is empty.');
+                        }
+
                         continuationToken = listObjectsResponse.NextContinuationToken;
 
                         for (const { Key } of listObjectsResponse.Contents ?? []) {
@@ -143,7 +176,7 @@ function s3ArchiveStream(
 
                     // Validate the stream
                     if (s3ObjectStream == null || !(s3ObjectStream instanceof Readable)) {
-                        throw new Error();
+                        throw new Error('S3 Object stream is null or not a Readable stream.');
                     }
                     // Determine which name to use in the archive,
                     // based on whether `name` is provided and if
@@ -172,7 +205,7 @@ function s3ArchiveStream(
     // We use then/catch so the caller of `s3ArchiveStream` does not have to await
     // this function but can directly .pipe the archiver.Archiver stream
     Promise.all(
-        Object.entries(groupedS3Buckets).map(([s3BucketName, archiveEntries]) => {
+        Object.entries(groupedS3Buckets).map(async ([s3BucketName, archiveEntries]) => {
             // determine the S3 client for the current bucket
             const client = clientOrClients instanceof S3Client ? clientOrClients : clientOrClients[s3BucketName];
 
@@ -186,7 +219,8 @@ function s3ArchiveStream(
         // When the Promise.all resolves, we finalize the archive, blocking further appends
         .then(() => archive.finalize())
         .catch((e) => {
-            throw e;
+            archive.destroy(e);
+            archive.abort();
         });
 
     // Return the archiver.Archiver stream
@@ -195,9 +229,9 @@ function s3ArchiveStream(
 
 export {
     s3ArchiveStream,
+    S3ArchiveStreamError,
     type S3ArchiveStreamEntry,
     type S3ArchiveStreamFileEntry,
     type S3ArchiveStreamDirEntry,
-    type S3ArchiveStreamError,
     type S3ArchiveStreamOptions,
 };
