@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types: [opened, synchronize, reopened]
 jobs:
   test:
     name: Test s3-archive-stream
@@ -21,6 +23,9 @@ jobs:
         with:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
-      - run: npm ci
-      - run: npm run fix-check
-      - run: npm run test
+      - name: Install dependencies
+        run: npm ci
+      - name: Check code style
+        run: npm run fix-check
+      - name: Run tests
+        run: npm run test
