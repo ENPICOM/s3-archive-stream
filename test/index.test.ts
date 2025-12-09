@@ -412,4 +412,24 @@ describe('s3-archive-stream tests', async () => {
         expect(error).toBeInstanceOf(S3ArchiveStreamError);
         expect(error.name).toBe('FailedToListObjectsError');
     });
+
+    it('should error when an s3 key is empty', async () => {
+        // This file does not exist in the bucket
+        const filesToZip = [
+            {
+                name: 'my_archive_filename1.txt',
+                s3Key: '',
+                s3BucketName: 'mocked-bucket-1',
+            },
+        ];
+
+        // Create the archive stream
+        const archive = s3ArchiveStream(s3MockClient, filesToZip);
+        const error = await new Promise<ArchiverError | S3ArchiveStreamError>((resolve) => {
+            archive.on('error', resolve);
+        });
+
+        expect(error).toBeInstanceOf(S3ArchiveStreamError);
+        expect(error.name).toBe('InvalidS3KeyError');
+    });
 });

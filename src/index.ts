@@ -31,16 +31,22 @@ class NoS3ClientProvidedForBucketError extends S3ArchiveStreamError {
 class FailedToGetS3ObjectStreamError extends S3ArchiveStreamError {
     constructor(s3Key: string, e: unknown) {
         super(
-            `Failed to get object stream for s3 object: ${s3Key}. Check if your IAM credentials allow you access. Original Error: ${e}`,
+            `Failed to get object stream for s3 object: ${s3Key}. Original Error: ${e}`,
             e,
         );
     }
 }
 
+class InvalidS3KeyError extends S3ArchiveStreamError {
+    constructor(s3Key: string) {
+        super(`The provided s3 key is invalid (empty or a folder): ${s3Key}`);
+    }
+};
+
 class FailedToListObjectsError extends S3ArchiveStreamError {
     constructor(s3Key: string, e: unknown) {
         super(
-            `Failed to list s3 objects for directory path: ${s3Key}. Check if your IAM credentials allow you access. Original Error: ${e}`,
+            `Failed to list s3 objects for directory path: ${s3Key}. Original Error: ${e}`,
             e,
         );
     }
@@ -138,7 +144,7 @@ function s3ArchiveStream(
                         continuationToken = listObjectsResponse.NextContinuationToken;
 
                         for (const { Key } of listObjectsResponse.Contents ?? []) {
-                            if (Key != null && !Key.endsWith('/')) {
+                            if (Key != null && !Key.endsWith('/') && Key !== '') {
                                 const archiveEntryName = preserveFolderStructure ? Key : Key.slice(prefix.length);
 
                                 // Append the s3 object to the list of objects to add for this dir.
@@ -165,6 +171,11 @@ function s3ArchiveStream(
                 await appendArchiveEntries(s3Client, directoryEntries);
             } else {
                 const { s3BucketName, s3Key, preserveFolderStructure, name, ...rest } = archiveEntry;
+
+                if (s3Key === '' || s3Key.endsWith('/')) {
+                    throw new InvalidS3KeyError(s3Key);
+                }
+
                 try {
                     // Get the s3 Object stream
                     const { Body: s3ObjectStream } = await s3Client.send(
