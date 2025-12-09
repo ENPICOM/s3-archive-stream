@@ -30,10 +30,7 @@ class NoS3ClientProvidedForBucketError extends S3ArchiveStreamError {
 
 class FailedToGetS3ObjectStreamError extends S3ArchiveStreamError {
     constructor(s3Key: string, e: unknown) {
-        super(
-            `Failed to get object stream for s3 object: ${s3Key}. Original Error: ${e}`,
-            e,
-        );
+        super(`Failed to get object stream for s3 object: ${s3Key}. Original Error: ${e}`, e);
     }
 }
 
@@ -41,14 +38,11 @@ class InvalidS3KeyError extends S3ArchiveStreamError {
     constructor(s3Key: string) {
         super(`The provided s3 key is invalid (empty or a folder): ${s3Key}`);
     }
-};
+}
 
 class FailedToListObjectsError extends S3ArchiveStreamError {
     constructor(s3Key: string, e: unknown) {
-        super(
-            `Failed to list s3 objects for directory path: ${s3Key}. Original Error: ${e}`,
-            e,
-        );
+        super(`Failed to list s3 objects for directory path: ${s3Key}. Original Error: ${e}`, e);
     }
 }
 
