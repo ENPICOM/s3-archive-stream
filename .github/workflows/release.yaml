@@ -34,10 +34,12 @@ jobs:
         run: npm run clean:build
       - name: Publish to NPM registry
         run: npm publish --access public
+      - name: Format coverage json
+        run: npm run fix
       - name: Commit coverage report
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add ./coverage.json
           git commit -m "chore: update code coverage summary"
-          git push
+          git push origin HEAD:main
