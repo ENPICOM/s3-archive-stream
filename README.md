@@ -4,12 +4,20 @@
 
 A NodeJS utility to stream-zip S3 objects into a single archive using [Archiver](https://www.archiverjs.com/) and the [AWS SDK](https://github.com/aws/aws-sdk-js-v3).
 
-## Motivation
+## Introduction
 
 Since there is no native method of AWS to ZIP & download multiple s3 objects from a s3 bucket, a client side solution is required. Although there are some examples out there, many utilities have not been maintained for a long time, or only work in a specific context. `s3-archive-stream`, built with Archiver, tries to fill that gap by providing a very simple function that returns an `archiver.Archiver` stream which can be used to pipe to a target, such as a http response, a file on disk or even a re-upload to S3.
 
 One of the key features of this utility is the support of stream-zipping s3 objects from _multiple s3 buckets_ using multiple `S3Client` instances. This is useful when you for example have a set of credentials per bucket, instead of a single client that has permissions on multiple buckets.
 
+### Key features
+
+- Supports multiple `S3Client` instances
+- Accepts keys to both S3 objects and 'directories'
+- Fully Typescript
+- Low memory footprint, even with large (amounts of) files
+- Practical examples
+- Good code coverage
 
 ## Installation
 
