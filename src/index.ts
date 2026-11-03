@@ -183,6 +183,7 @@ function s3ArchiveStream(
                     if (s3ObjectStream == null || !(s3ObjectStream instanceof Readable)) {
                         throw new Error('S3 Object stream is null or not a Readable stream.');
                     }
+                    s3ObjectStream.on('error', (e) => archive.destroy(new FailedToGetS3ObjectStreamError(s3Key, e)));
                     // Determine which name to use in the archive,
                     // based on whether `name` is provided and if
                     // `preserveFolderStructure` is true or not.
