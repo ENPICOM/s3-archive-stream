@@ -1,0 +1,14 @@
+test/index.test.ts
+  h_8b17d7c36173d0 5-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ba17ef214750885ff399eafcb133b5f3bcb94dd5",
+  "prompts": {},
+  "humans": {
+    "h_8b17d7c36173d0": {
+      "author": "Steven Liebregt <s.liebregt@outlook.com>"
+    }
+  }
+}
