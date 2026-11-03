@@ -2,13 +2,13 @@ import { NoSuchBucket, NoSuchKey, S3Client } from '@aws-sdk/client-s3';
 import AdmZip from 'adm-zip';
 import type { ArchiverError } from 'archiver';
 import fs from 'fs';
+import http from 'http';
+import type { AddressInfo } from 'net';
 import { text } from 'stream/consumers';
 import tar from 'tar-stream';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { S3ArchiveStreamError, s3ArchiveStream } from '../src';
 import { createMockedFiles } from './mocks3Objects';
-import http from 'http';
-import type { AddressInfo } from 'net';
 
 let s3MockClient: S3Client;
 
