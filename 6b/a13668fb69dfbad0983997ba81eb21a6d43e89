@@ -1,0 +1,16 @@
+package-lock.json
+  h_8b17d7c36173d0 3,9
+package.json
+  h_8b17d7c36173d0 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6ba13668fb69dfbad0983997ba81eb21a6d43e89",
+  "prompts": {},
+  "humans": {
+    "h_8b17d7c36173d0": {
+      "author": "Steven Liebregt <s.liebregt@outlook.com>"
+    }
+  }
+}
