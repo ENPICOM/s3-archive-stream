@@ -1,6 +1,6 @@
 {
     "name": "s3-archive-stream",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "description": "A NodeJS utility to stream-zip S3 objects into a single archive using Archiver and AWS SDK",
     "main": "./dist/index.js",
     "type": "module",
@@ -32,11 +32,11 @@
     },
     "homepage": "https://github.com/ENPICOM/s3-archive-stream#readme",
     "dependencies": {
-        "@aws-sdk/client-s3": "^3.946.0",
+        "@aws-sdk/client-s3": "^3.1161.0",
         "archiver": "^7.0.1"
     },
     "devDependencies": {
-        "@aws-sdk/lib-storage": "^3.946.0",
+        "@aws-sdk/lib-storage": "^3.1161.0",
         "@biomejs/biome": "2.2.4",
         "@types/adm-zip": "^0.5.7",
         "@types/archiver": "6.0.3",

@@ -2,6 +2,8 @@ import { NoSuchBucket, NoSuchKey, S3Client } from '@aws-sdk/client-s3';
 import AdmZip from 'adm-zip';
 import type { ArchiverError } from 'archiver';
 import fs from 'fs';
+import http from 'http';
+import type { AddressInfo } from 'net';
 import { text } from 'stream/consumers';
 import tar from 'tar-stream';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -431,5 +433,29 @@ describe('s3-archive-stream tests', async () => {
 
         expect(error).toBeInstanceOf(S3ArchiveStreamError);
         expect(error.name).toBe('InvalidS3KeyError');
+    });
+
+    it('should emit an error when an s3 object stream breaks mid-download', async () => {
+        const server = http.createServer((req, res) => {
+            res.writeHead(200, { 'content-length': '1048576', 'x-amz-checksum-crc32': 'AAAAAA==' });
+            res.write(Buffer.alloc(1024));
+            setTimeout(() => req.socket.destroy(), 100);
+        });
+        await new Promise<void>((resolve) => server.listen(0, resolve));
+        const { port } = server.address() as AddressInfo;
+
+        const client = new S3Client({
+            forcePathStyle: true,
+            region: 'us-east-1',
+            credentials: { accessKeyId: '', secretAccessKey: '' },
+            endpoint: `http://localhost:${port}`,
+        });
+
+        const archive = s3ArchiveStream(client, [{ s3Key: 'broken.txt', s3BucketName: 'any-bucket' }]);
+        archive.resume();
+        const error = await new Promise((resolve) => archive.on('error', resolve));
+        server.close();
+
+        expect(error).toBeInstanceOf(S3ArchiveStreamError);
     });
 });
