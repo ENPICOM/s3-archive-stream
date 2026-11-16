@@ -1,0 +1,26 @@
+src/index.ts
+  h_8b17d7c36173d0 173-174,222-224,231-243
+  s_3a0ade7b162f29::t_f2b93db2ce485a 225-230
+  s_3a0ade7b162f29::t_b17606967020d0 175-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "58d5d5ae06fffb030b4843a84b67867ae3c98a56",
+  "prompts": {},
+  "humans": {
+    "h_8b17d7c36173d0": {
+      "author": "Steven Liebregt <s.liebregt@outlook.com>"
+    }
+  },
+  "sessions": {
+    "s_3a0ade7b162f29": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "220d0d01-155f-4a85-a2f3-1306167524ce",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Steven Liebregt <s.liebregt@outlook.com>"
+    }
+  }
+}
