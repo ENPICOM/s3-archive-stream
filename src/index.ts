@@ -170,31 +170,17 @@ function s3ArchiveStream(
                     throw new InvalidS3KeyError(s3Key);
                 }
 
-                try {
-                    // Get the s3 Object stream
-                    const { Body: s3ObjectStream } = await s3Client.send(
-                        new GetObjectCommand({
-                            Bucket: s3BucketName,
-                            Key: s3Key,
-                        }),
-                    );
+                const s3ObjectStream = lazyS3ObjectStream(s3Client, s3BucketName, s3Key);
+                s3ObjectStream.on('error', (e) => archive.destroy(new FailedToGetS3ObjectStreamError(s3Key, e)));
 
-                    // Validate the stream
-                    if (s3ObjectStream == null || !(s3ObjectStream instanceof Readable)) {
-                        throw new Error('S3 Object stream is null or not a Readable stream.');
-                    }
-                    s3ObjectStream.on('error', (e) => archive.destroy(new FailedToGetS3ObjectStreamError(s3Key, e)));
-                    // Determine which name to use in the archive,
-                    // based on whether `name` is provided and if
-                    // `preserveFolderStructure` is true or not.
-                    const archiveEntryName =
-                        name ?? (preserveFolderStructure ? s3Key : s3Key.substring(s3Key.lastIndexOf('/') + 1));
+                // Determine which name to use in the archive,
+                // based on whether `name` is provided and if
+                // `preserveFolderStructure` is true or not.
+                const archiveEntryName =
+                    name ?? (preserveFolderStructure ? s3Key : s3Key.substring(s3Key.lastIndexOf('/') + 1));
 
-                    // Append the object stream to the archiver queue
-                    archive.append(s3ObjectStream, { ...rest, name: archiveEntryName });
-                } catch (e) {
-                    throw new FailedToGetS3ObjectStreamError(s3Key, e);
-                }
+                // Append the object stream to the archiver queue
+                archive.append(s3ObjectStream, { ...rest, name: archiveEntryName });
             }
         }
     }
@@ -231,6 +217,28 @@ function s3ArchiveStream(
 
     // Return the archiver.Archiver stream
     return archive;
+}
+
+/**
+ * Archiver consumes its queue one entry at a time, so an object stream opened at append time sits idle until every
+ * entry before it is done, and S3 closes idle connections. The GetObject is deferred until archiver first reads.
+ *
+ * @param {S3Client} s3Client Client used for the deferred GetObject request.
+ * @param {S3BucketName} s3BucketName Bucket containing the object.
+ * @param {S3Key} s3Key Key of the object to stream.
+ * @returns {Readable} A byte stream that requests the object on first read. A failed request or a broken S3 stream
+ *     surfaces as an `'error'` event on it.
+ */
+function lazyS3ObjectStream(s3Client: S3Client, s3BucketName: S3BucketName, s3Key: S3Key): Readable {
+    async function* readS3Object() {
+        const { Body } = await s3Client.send(new GetObjectCommand({ Bucket: s3BucketName, Key: s3Key }));
+        if (!(Body instanceof Readable)) {
+            throw new Error('S3 Object stream is null or not a Readable stream.');
+        }
+        yield* Body;
+    }
+
+    return Readable.from(readS3Object(), { objectMode: false });
 }
 
 export {
